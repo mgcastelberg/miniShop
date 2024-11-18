@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
-use Exception;
 use App\Http\Controllers\Controller;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\Request;
-use App\Traits\JwtAuth;
-use App\Traits\ApiResponser;
 use App\Models\User;
+use App\Traits\ApiResponser;
+use App\Traits\JwtAuth;
+use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+
 class AuthController extends Controller
 {
     use JwtAuth;
     use ApiResponser;
+
     public function login(Request $request)
     {
         try {
@@ -38,9 +41,7 @@ class AuthController extends Controller
                     'email'  => $user->email,
                     'fullName'  => $user->name,
                     'isActive'  => true,
-                    'roles'  => ['admin'],
-                    'iat'      => time(), // Fecha de emisión (en segundos)
-                    'exp'      => time() + 3600, // Expiración (1 hora después de la emisión)
+                    'roles'  => ['admin']
                 ];
                 $payload['token'] = $this->jwtEncode($payload);
                 return response()->json($payload, 200);
@@ -81,15 +82,49 @@ class AuthController extends Controller
                 'email'  => $user->email,
                 'fullName'  => $user->name,
                 'isActive'  => true,
-                'roles'  => ['admin'],
-                'iat'      => time(), // Fecha de emisión (en segundos)
-                'exp'      => time() + 3600 // Expiración (1 hora después de la emisión)
+                'roles'  => ['admin']
             ];
             $newPayload['token'] = $this->jwtEncode($newPayload);
 
             return response()->json($newPayload, 200);
         } catch (Exception $e) {
             return $this->errorResponse('Error: '. $e->getMessage(), 500);
+        }
+    }
+
+    public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
+            'fullName' => ['required', 'string', 'max:100'],
+            'password' => ['required', 'string', 'max:60'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorFormApiResponse($validator->errors(), 422);
+        }
+
+
+        try {
+            $user = new User;
+            $user->email = $request->input('email');
+            $user->name = $request->input('fullName');
+            $user->password = $request->password ? Hash::make(trim($request->password)) : Hash::make('LocalD4sh');
+            $user->save();
+
+            $payload = [
+                'id'    => $user->id,
+                'email'  => $user->email,
+                'fullName'  => $user->name,
+                'isActive'  => true,
+                'roles'  => ['admin']
+            ];
+            $payload['token'] = $this->jwtEncode($payload);
+            return response()->json($payload, 200);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $this->errorApiResponse('Could not create client', 500, $e->getMessage());
         }
     }
 

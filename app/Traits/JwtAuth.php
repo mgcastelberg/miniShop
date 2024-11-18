@@ -20,6 +20,8 @@ trait JwtAuth{
     public function jwtEncode($payload=null)
     {
         if($payload){
+            $payload['iat'] = time(); // Fecha de emisión (en segundos)
+            $payload['exp'] = time() + 360; // Expiración (1 hora después de la emisión)
             return JWT::encode($payload, $this->key, 'HS256');
         }else{
             return array('status' => 'error', 'message' => 'Login a fallado');
