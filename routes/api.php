@@ -27,4 +27,5 @@ Route::post('auth/register', [ AuthController::class, 'register']);
 Route::get('auth/refreshToken', [ AuthController::class, 'refreshToken']);
 
 Route::get('products', [ ProductController::class, 'index']);
+Route::get('products/{id}', [ ProductController::class, 'show']);
 Route::get('seed', [ ProductController::class, 'seed']);

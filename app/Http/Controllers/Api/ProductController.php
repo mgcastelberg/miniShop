@@ -41,7 +41,21 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $product = Product::when(is_numeric($id), function ($query) use ($id) {
+            return $query->where('id', $id);
+        }, function ($query) use ($id) {
+            return $query->where('uuid', $id);
+        })->first();
+
+        if (!$product) {
+            return response()->json([
+                'statusCode' => 404,
+                'message' => 'Product with id ' . $id . ' not found',
+                'error' => 'Product not found'
+            ], 404);
+        }
+
+        return response()->json($product, 200);
     }
 
     /**
